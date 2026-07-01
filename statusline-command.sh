@@ -4,6 +4,20 @@ input=$(cat)
 # --- model ---
 model=$(echo "$input" | jq -r '.model.display_name // ""')
 
+# --- reasoning effort ---
+# models with "1M context" -> "(1M - <effort>)", others -> "(<effort>)"
+effort=$(echo "$input" | jq -r '.effort.level // ""')
+if [ -n "$effort" ]; then
+  case "$model" in
+    *"1M context"*)
+      model=$(echo "$model" | sed "s/1M context/1M - ${effort}/")
+      ;;
+    *)
+      model="${model} (${effort})"
+      ;;
+  esac
+fi
+
 # --- folder ---
 dir=$(echo "$input" | jq -r '.workspace.current_dir // .cwd // ""')
 dir_name=$(basename "$dir")
