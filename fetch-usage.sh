@@ -10,6 +10,25 @@ CACHE_FILE="/tmp/.claude_usage_cache"
 TOKEN_CACHE="/tmp/.claude_token_cache"
 TOKEN_TTL=900  # 15 minutes
 
+# --- read a fresh access token from the keychain and refresh the cache ---
+token_from_keychain() {
+  creds_json=$(security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null)
+  [ -z "$creds_json" ] && return
+  tok=$(printf '%s' "$creds_json" | jq -r '.claudeAiOauth.accessToken // empty' 2>/dev/null)
+  [ -z "$tok" ] && return
+  printf '%s' "$tok" > "$TOKEN_CACHE"
+  printf '%s' "$tok"
+}
+
+fetch_usage() {
+  curl -s -m 3 \
+    -H "accept: application/json" \
+    -H "anthropic-beta: oauth-2025-04-20" \
+    -H "authorization: Bearer $1" \
+    -H "user-agent: claude-code/2.1.11" \
+    "https://api.anthropic.com/oauth/usage" 2>/dev/null
+}
+
 # --- get token (with 15-min cache to avoid repeated credential reads) ---
 token=""
 if [ -f "$TOKEN_CACHE" ]; then
@@ -19,24 +38,22 @@ if [ -f "$TOKEN_CACHE" ]; then
   fi
 fi
 
-if [ -z "$token" ]; then
-  creds_json=$(security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null)
-  if [ -z "$creds_json" ]; then
-    exit 0
-  fi
-  token=$(printf '%s' "$creds_json" | jq -r '.claudeAiOauth.accessToken // empty' 2>/dev/null)
-  if [ -z "$token" ]; then
-    exit 0
-  fi
-  printf '%s' "$token" > "$TOKEN_CACHE"
-fi
+[ -z "$token" ] && token=$(token_from_keychain)
+[ -z "$token" ] && exit 0
 
-usage_json=$(curl -s -m 3 \
-  -H "accept: application/json" \
-  -H "anthropic-beta: oauth-2025-04-20" \
-  -H "authorization: Bearer $token" \
-  -H "user-agent: claude-code/2.1.11" \
-  "https://api.anthropic.com/oauth/usage" 2>/dev/null)
+usage_json=$(fetch_usage "$token")
+
+# The cached token may be stale (Claude Code rotates the OAuth token in the
+# keychain). If it was rejected, drop the cache, re-read from the keychain and
+# retry once with a fresh token.
+case "$usage_json" in
+  *authentication_error*|*"Invalid authentication"*)
+    rm -f "$TOKEN_CACHE"
+    token=$(token_from_keychain)
+    [ -z "$token" ] && exit 0
+    usage_json=$(fetch_usage "$token")
+    ;;
+esac
 
 if [ -z "$usage_json" ]; then
   exit 0
