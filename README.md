@@ -7,9 +7,10 @@
 ![my-minimal-claude-code-statusline-config-v0-bw0th9wf90mg1](https://github.com/user-attachments/assets/05edca4f-749a-433b-b4da-262f840e0a1c)
 
 ## Installation
-
+```
 git clone https://github.com/xeri/claude-watch-win.git
 cd claude-watch-win
+```
 
 **1. Copy the scripts**
 
