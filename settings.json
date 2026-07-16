@@ -1,7 +1,7 @@
 {
    "statusLine": {
       "type": "command",
-      "command": "bash ~/.claude/statusline-command.sh"
+      "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"$HOME/.claude/statusline-command.ps1\""
    },
    "hooks": {
       "PreToolUse": [
@@ -10,7 +10,7 @@
             "hooks": [
                {
                   "type": "command",
-                  "command": "bash ~/.claude/fetch-usage.sh > /dev/null 2>&1 &"
+                  "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Start-Process powershell -WindowStyle Hidden -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','$HOME/.claude/fetch-usage.ps1'\""
                }
             ]
          }
@@ -21,7 +21,7 @@
             "hooks": [
                {
                   "type": "command",
-                  "command": "bash ~/.claude/fetch-usage.sh > /dev/null 2>&1 &"
+                  "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Start-Process powershell -WindowStyle Hidden -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','$HOME/.claude/fetch-usage.ps1'\""
                }
             ]
          }
